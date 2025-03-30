@@ -92,8 +92,7 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 		// Reuse objects.
 		private final static FloatWritable VALUE = new FloatWritable();
 
-		private String currentPrefix = null;
-		private float currentSum = 0;
+		private static final Map<String, Integer> prefixCounts = new HashMap<>();
 
 		@Override
 		public void reduce(PairOfStrings key, Iterable<IntWritable> values,
@@ -103,6 +102,7 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 			 */
 			String left = key.getLeftElement();
 			String right = key.getRightElement();
+			float currentSum = 0;
 
 			if ("*".equals(right)) {
 				// 计算前导词总次数
@@ -110,18 +110,18 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 				for (IntWritable val : values) {
 					sum += val.get();
 				}
-				currentPrefix = left; // todo-ck check
-				currentSum = sum;
+				prefixCounts.put(left, sum);
 			} else {
 				// 计算相对频率
-				if (!left.equals(currentPrefix)) {
+				if (!prefixCounts.containsKey(left)) {
 					return; // 确保前导词匹配
 				}
+				currentSum = prefixCounts.get(left);
 				int count = 0;
 				for (IntWritable val : values) {
 					count += val.get();
 				}
-				float freq = (currentSum == 0) ? 0 : (float) count / currentSum;
+				float freq = currentSum == 0 ? 0 :count/currentSum;
 				VALUE.set(freq);
 				context.write(key, VALUE);
 			}
