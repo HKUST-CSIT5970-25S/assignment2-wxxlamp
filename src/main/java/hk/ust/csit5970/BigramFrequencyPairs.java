@@ -2,6 +2,9 @@ package hk.ust.csit5970;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -44,15 +47,39 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 		private static final IntWritable ONE = new IntWritable(1);
 		private static final PairOfStrings BIGRAM = new PairOfStrings();
 
+		private final PairOfStrings STAR_KEY = new PairOfStrings();
+
 		@Override
 		public void map(LongWritable key, Text value, Context context)
 				throws IOException, InterruptedException {
 			String line = ((Text) value).toString();
 			String[] words = line.trim().split("\\s+");
-			
+
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// key: previous_word, current_word
+			// value: 1
+			// key: previous_word, *
+			// value: 1
+			if (words.length > 1){
+				String previous_word = words[0];
+				for (int i = 1; i < words.length; i++) {
+					String currentWord = words[i];
+					// Skip empty words
+					if (currentWord.isEmpty()) {
+						continue;
+					}
+					// bigram: previous_word, current_word
+					BIGRAM.set(previous_word, currentWord);
+					context.write(BIGRAM, ONE);
+
+					// bigram: previous_word, *
+					STAR_KEY.set(previous_word, "*");
+					context.write(STAR_KEY, ONE);
+					previous_word = currentWord;
+				}
+			}
 		}
 	}
 
@@ -65,15 +92,42 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 		// Reuse objects.
 		private final static FloatWritable VALUE = new FloatWritable();
 
+		private String currentPrefix = null;
+		private float currentSum = 0;
+
 		@Override
 		public void reduce(PairOfStrings key, Iterable<IntWritable> values,
 				Context context) throws IOException, InterruptedException {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			String left = key.getLeftElement();
+			String right = key.getRightElement();
+
+			if ("*".equals(right)) {
+				// 计算前导词总次数
+				int sum = 0;
+				for (IntWritable val : values) {
+					sum += val.get();
+				}
+				currentPrefix = left; // todo-ck check
+				currentSum = sum;
+			} else {
+				// 计算相对频率
+				if (!left.equals(currentPrefix)) {
+					return; // 确保前导词匹配
+				}
+				int count = 0;
+				for (IntWritable val : values) {
+					count += val.get();
+				}
+				float freq = (currentSum == 0) ? 0 : (float) count / currentSum;
+				VALUE.set(freq);
+				context.write(key, VALUE);
+			}
 		}
 	}
-	
+
 	private static class MyCombiner extends
 			Reducer<PairOfStrings, IntWritable, PairOfStrings, IntWritable> {
 		private static final IntWritable SUM = new IntWritable();
@@ -84,6 +138,12 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			int counts = 0;
+			for (IntWritable value : values) {
+				counts += value.get();
+			}
+			SUM.set(counts);
+			context.write(key, SUM);
 		}
 	}
 
