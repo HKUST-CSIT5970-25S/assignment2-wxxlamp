@@ -94,9 +94,7 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 		// Reuse objects.
 		private final static FloatWritable VALUE = new FloatWritable();
 
-		private static final Map<String, Integer> prefixCounts = new HashMap<>();
-
-		private static final Set<String> prefixSet = new HashSet<>();
+		private static final Map<String, Integer> prefixCounts = new HashMap<String, Integer>();
 
 		@Override
 		public void reduce(PairOfStrings key, Iterable<IntWritable> values,
