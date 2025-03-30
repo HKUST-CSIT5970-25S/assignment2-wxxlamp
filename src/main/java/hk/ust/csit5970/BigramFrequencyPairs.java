@@ -69,7 +69,7 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 				for (int i = 1; i < words.length; i++) {
 					String currentWord = words[i];
 					// Skip empty words
-					if (currentWord.isEmpty()) {
+					if (currentWord.length() == 0) {
 						continue;
 					}
 					// bigram: previous_word, current_word
@@ -77,7 +77,7 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 					context.write(BIGRAM, ONE);
 
 					// bigram: previous_word, *
-					STAR_KEY.set(previous_word, "*");
+					STAR_KEY.set(previous_word, " ");
 					context.write(STAR_KEY, ONE);
 					previous_word = currentWord;
 				}
@@ -106,7 +106,7 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 			String right = key.getRightElement();
 			float currentSum = 0;
 
-			if ("*".equals(right)) {
+			if (" ".equals(right)) {
 				// compute prefix count
 				int sum = 0;
 				for (IntWritable val : values) {
@@ -114,7 +114,7 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 				}
 				prefixCounts.put(left, sum);
 				VALUE.set(sum);
-				context.write(new PairOfStrings(left, ""), VALUE);
+				context.write(key, VALUE);
 				LOG.info("reducer: " + key + " " + VALUE);
 			} else {
 				// compute frequency
