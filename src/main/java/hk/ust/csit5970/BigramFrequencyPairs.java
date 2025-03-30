@@ -3,8 +3,10 @@ package hk.ust.csit5970;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -94,6 +96,8 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 
 		private static final Map<String, Integer> prefixCounts = new HashMap<>();
 
+		private static final Set<String> prefixSet = new HashSet<>();
+
 		@Override
 		public void reduce(PairOfStrings key, Iterable<IntWritable> values,
 				Context context) throws IOException, InterruptedException {
@@ -105,16 +109,20 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 			float currentSum = 0;
 
 			if ("*".equals(right)) {
-				// 计算前导词总次数
+				// compute prefix count
 				int sum = 0;
 				for (IntWritable val : values) {
 					sum += val.get();
 				}
 				prefixCounts.put(left, sum);
+				VALUE.set(sum);
+				context.write(new PairOfStrings(left, ""), VALUE);
+				LOG.info("reducer: " + key + " " + VALUE);
 			} else {
-				// 计算相对频率
+				// compute frequency
 				if (!prefixCounts.containsKey(left)) {
-					return; // 确保前导词匹配
+					LOG.error("prefixCounts does not contain " + left);
+					return;
 				}
 				currentSum = prefixCounts.get(left);
 				int count = 0;
@@ -124,6 +132,7 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 				float freq = currentSum == 0 ? 0 :count/currentSum;
 				VALUE.set(freq);
 				context.write(key, VALUE);
+				LOG.info("reducer: " + key + " " + VALUE);
 			}
 		}
 	}
@@ -144,6 +153,7 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 			}
 			SUM.set(counts);
 			context.write(key, SUM);
+			LOG.info("combiner: " + key + " " + SUM);
 		}
 	}
 
