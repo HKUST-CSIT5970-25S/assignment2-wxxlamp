@@ -2,6 +2,7 @@ package hk.ust.csit5970;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.commons.cli.CommandLine;
@@ -54,6 +55,22 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// key: previous_word
+			// value: current_word, 1
+			if (words.length > 1){
+				KEY.set( words[0]);
+				for (int i = 1; i < words.length; i++) {
+					String w = words[i];
+					// Skip empty words
+					if (w.length() == 0) {
+						continue;
+					}
+					STRIPE.increment(w);
+					context.write(KEY, STRIPE);
+					KEY.set(w);
+					STRIPE.clear();
+				}
+			}
 		}
 	}
 
@@ -75,6 +92,33 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// flush the first worlds and nums
+			int sum = 0;
+			String first_w = key.toString();
+			for (HashMapStringIntWritable stripe : stripes) {
+				for (Map.Entry<String, Integer> stringIntegerEntry : stripe.entrySet()) {
+					sum += stringIntegerEntry.getValue();
+				}
+				SUM_STRIPES.plus(stripe);
+			}
+			if (sum == 0) {
+				return;
+			}
+			FREQ.set(sum);
+			BIGRAM.set(first_w, "");
+			context.write(BIGRAM, FREQ);
+
+			// process the second words
+			for (Map.Entry<String, Integer> mapElement : SUM_STRIPES.entrySet()) {
+				String second_w = (String) mapElement.getKey();
+				int value = (int) mapElement.getValue();
+				BIGRAM.set(first_w, second_w);
+				FREQ.set((float) value /sum);
+				context.write(BIGRAM, FREQ);
+			}
+
+			// clear the context
+			SUM_STRIPES.clear();
 		}
 	}
 
@@ -94,6 +138,17 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			// key: previous_word
+			// value: current_word, n
+			Iterator<HashMapStringIntWritable> iter = stripes.iterator();
+
+			while (iter.hasNext()) {
+				for ( String second_w : iter.next().keySet() ) {
+					SUM_STRIPES.increment(second_w);
+				}
+			}
+			context.write(key, SUM_STRIPES);
+			SUM_STRIPES.clear();
 		}
 	}
 
