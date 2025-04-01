@@ -136,6 +136,8 @@ public class CORStripes extends Configured implements Tool {
 					}
 				}
 			}
+
+			context.write(key, combinedStripe);
 		}
 	}
 
