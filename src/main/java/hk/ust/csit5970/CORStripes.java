@@ -202,16 +202,19 @@ public class CORStripes extends Configured implements Tool {
 					}
 				}
 			}
+			LOG.info("totalStripe: " + totalStripe);
 
 			for (Map.Entry<Writable, Writable> entry : totalStripe.entrySet()) {
 				Text coWordText = (Text) entry.getKey();
-				IntWritable countWritable = (IntWritable) entry.getValue();
 				String wordB = coWordText.toString();
+
+				IntWritable countWritable = (IntWritable) entry.getValue();
 				int freqAB = countWritable.get();
 
 				Integer freqA = word_total_map.get(wordA);
 				Integer freqB = word_total_map.get(wordB);
 				if (freqA == null || freqB == null || freqA == 0 || freqB == 0) {
+					LOG.error("freqA or freqB is null or 0!");
 					continue;
 				}
 
